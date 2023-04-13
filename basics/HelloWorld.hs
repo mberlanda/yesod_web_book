@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
+import Data.Text (Text)
 import Yesod
 
 data HelloWorld = HelloWorld
@@ -31,15 +32,24 @@ myLayout widget = do
                         ^{pageBody pc}
         |]
 
+myGenerateIds :: Text -> Widget
+myGenerateIds pageTitle = do
+  headerClass <- newIdent
+  toWidget [hamlet|<h1 .#{headerClass}>#{pageTitle}|]
+  toWidget [lucius| .#{headerClass} { color: green; } |]
+
 instance Yesod HelloWorld where
   defaultLayout = myLayout
 
 getHomeR :: Handler Html
-getHomeR = defaultLayout [whamlet|Hello World!|]
+getHomeR = defaultLayout $ do
+  setTitle "Hello World!"
+  myGenerateIds "Hello World!"
+  toWidget [whamlet|Hello World!|]
 
 alertsHead :: Widget
 alertsHead = do
-  setTitle "My Page Title"
+  setTitle "Alerts Page"
   toWidget [lucius| h1 { color: green; } |]
   addScriptRemote "https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"
   toWidget
