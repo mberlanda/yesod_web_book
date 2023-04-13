@@ -13,6 +13,7 @@ mkYesod
   [parseRoutes|
 / HomeR GET
 /alerts AlertsR GET
+/page PageR GET
 |]
 
 myLayout :: Widget -> Handler Html
@@ -81,6 +82,31 @@ getAlertsR :: Handler Html
 getAlertsR = defaultLayout $ do
   alertsHead
   alertsBody
+
+footer :: Widget
+footer = do
+    toWidget
+        [lucius|
+            footer {
+                font-weight: bold;
+                text-align: center
+            }
+        |]
+    toWidget
+        [hamlet|
+            <footer>
+                <p>That's all folks!
+        |]
+
+page :: Widget
+page =
+    [whamlet|
+        <p>This is my page. I hope you enjoyed it.
+        ^{footer}
+    |]
+
+getPageR :: Handler Html
+getPageR = defaultLayout $ page
 
 main :: IO ()
 main = warp 3000 HelloWorld
