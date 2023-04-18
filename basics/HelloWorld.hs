@@ -4,6 +4,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
+import Control.Exception (IOException, try)
+import Control.Monad (when)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Yesod
@@ -47,10 +49,12 @@ myGenerateIds pageTitle = do
   toWidget [lucius| .#{headerClass} { color: green; } |]
 
 instance Yesod HelloWorld where
+  shouldLogIO HelloWorld src level = return True
   defaultLayout = myLayout
   errorHandler NotFound = fmap toTypedContent $ defaultLayout $ do
     setTitle "Request page not located"
-    toWidget [hamlet|
+    toWidget
+      [hamlet|
 <h1>Not Found
 <p>We apologize for the inconvenience, but the requested page could not be located.
 |]
@@ -60,15 +64,31 @@ getHomeR :: Handler Html
 getHomeR = defaultLayout $ do
   setTitle "Hello World!"
   myGenerateIds "Hello World!"
-  toWidget [whamlet|
-    <p>
-      <ul>
-        <li><a href=@{AlertsR}>Alerts
-        <li><a href=@{PageR}>Page
-        <li><a href=@{ErrorR}>Internal server error
-        <li><a href=@{NotFoundR}>Not found
-    
-|]
+  $logDebug "Trying to read data file"
+  edata <- liftIO $ try $ readFile "datafile.txt"
+  case edata :: Either IOException String of
+    Left e -> do
+      $logError "Could not read datafile.txt"
+      toWidget
+        [whamlet|
+          <p>
+            <ul>
+              <li><a href=@{AlertsR}>Alerts
+              <li><a href=@{PageR}>Page
+              <li><a href=@{ErrorR}>Internal server error
+              <li><a href=@{NotFoundR}>Not found
+          
+        |]
+    Right str -> do
+      $logInfo "Reading of data file succeeded"
+      let ls = lines str
+      when (length ls < 5) $ $logWarn "Less than 5 lines of data"
+      toWidget
+        [whamlet|
+                  <ol>
+                      $forall l <- ls
+                          <li>#{l}
+              |]
 
 alertsHead :: Widget
 alertsHead = do
@@ -107,22 +127,22 @@ getAlertsR = defaultLayout $ do
 
 footer :: Widget
 footer = do
-    toWidget
-        [lucius|
+  toWidget
+    [lucius|
             footer {
                 font-weight: bold;
                 text-align: center
             }
         |]
-    toWidget
-        [hamlet|
+  toWidget
+    [hamlet|
             <footer>
                 <p>That's all folks!
         |]
 
 page :: Widget
 page =
-    [whamlet|
+  [whamlet|
         <p>This is my page. I hope you enjoyed it.
         ^{footer}
     |]
@@ -143,10 +163,9 @@ getPersonR name = defaultLayout [whamlet|<h1>Hello #{name}!|]
 -- http://localhost:3000/year/2023/month/april/day/18
 handleDateR :: Integer -> Text -> Int -> Handler Text -- text/plain
 handleDateR year month day =
-    return $
-        T.concat [month, " ", T.pack $ show day, ", ", T.pack $ show year]
+  return $
+    T.concat [month, " ", T.pack $ show day, ", ", T.pack $ show year]
 
-http://localhost:3000/wiki/lorem/ipsum
 -- http://localhost:3000/wiki/lorem/ipsum
 getWikiR :: [Text] -> Handler Text
 getWikiR = return . T.unwords
