@@ -2,8 +2,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 import Data.Text (Text)
+import qualified Data.Text as T
 import Yesod
 
 data HelloWorld = HelloWorld
@@ -14,6 +16,9 @@ mkYesod
 / HomeR GET
 /alerts AlertsR GET
 /page PageR GET
+/person/#Text PersonR GET
+/year/#Integer/month/#Text/day/#Int DateR
+/wiki/*Texts WikiR GET
 /error ErrorR GET
 /not-found NotFoundR GET
 |]
@@ -130,6 +135,21 @@ getErrorR = error "This is an error"
 
 getNotFoundR :: Handler ()
 getNotFoundR = notFound
+
+-- http://localhost:3000/person/foo
+getPersonR :: Text -> Handler Html
+getPersonR name = defaultLayout [whamlet|<h1>Hello #{name}!|]
+
+-- http://localhost:3000/year/2023/month/april/day/18
+handleDateR :: Integer -> Text -> Int -> Handler Text -- text/plain
+handleDateR year month day =
+    return $
+        T.concat [month, " ", T.pack $ show day, ", ", T.pack $ show year]
+
+http://localhost:3000/wiki/lorem/ipsum
+-- http://localhost:3000/wiki/lorem/ipsum
+getWikiR :: [Text] -> Handler Text
+getWikiR = return . T.unwords
 
 main :: IO ()
 main = warp 3000 HelloWorld
